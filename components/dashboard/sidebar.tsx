@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useLogout } from "@privy-io/react-auth"
 import {
   Calendar,
   Car,
@@ -27,6 +26,7 @@ import {
 import { ChainMoveLogo } from "@/components/chain-move-logo"
 import { getDashboardSidebarEventNames } from "@/components/dashboard/sidebar-events"
 import { useToast } from "@/components/ui/use-toast"
+import { useLogout } from "@/lib/privy/react-auth"
 import { cn } from "@/lib/utils"
 
 type DashboardRole = "driver" | "investor" | "admin"
