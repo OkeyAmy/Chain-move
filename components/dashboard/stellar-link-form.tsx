@@ -61,7 +61,7 @@ export function StellarLinkForm({ onLinked }: StellarLinkFormProps) {
 
     if (!isClientSideValidStellarKey(trimmed)) {
       setFieldError(
-        "Enter a valid Stellar public account — it must start with "G" and be exactly 56 characters.",
+        'Enter a valid Stellar public account — it must start with "G" and be exactly 56 characters.',
       )
       return
     }
