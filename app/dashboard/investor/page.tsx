@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useFundWallet, useWallets } from "@privy-io/react-auth"
 import { CalendarDays, ChevronDown, PlusCircle } from "lucide-react"
 import { formatEther } from "viem"
 import { liskSepolia } from "viem/chains"
@@ -12,6 +11,7 @@ import { DashboardHeader } from "@/components/dashboard/investor-overview/dashbo
 import { DashboardBanner } from "@/components/dashboard/investor-overview/dashboard-banner"
 import { MetricsRow } from "@/components/dashboard/investor-overview/metrics-row"
 import { PortfolioActivityCard } from "@/components/dashboard/investor-overview/portfolio-activity-card"
+import { InvestorStellarActivityPanel } from "@/components/dashboard/investor-overview/stellar-activity-panel"
 import { WalletsCard } from "@/components/dashboard/investor-overview/wallets-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +19,7 @@ import { DashboardRouteLoading } from "@/components/dashboard/dashboard-route-lo
 import { getUserDisplayName, useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { getPrivyFundingErrorMessage, startPrivyFunding } from "@/lib/auth/privy-funding"
+import { useFundWallet, useWallets } from "@/lib/privy/react-auth"
 import { formatNaira } from "@/lib/currency"
 import { isMockStellar } from "@/lib/mock-stellar/mockConfig"
 import { mockAccount } from "@/lib/mock-stellar/mockAccount"
@@ -377,6 +378,8 @@ export default function InvestorOverviewPage() {
             }
           />
         </section>
+
+        <InvestorStellarActivityPanel />
       </main>
     </DashboardShell>
   )

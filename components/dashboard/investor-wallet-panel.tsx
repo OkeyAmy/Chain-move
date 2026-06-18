@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useFundWallet, useWallets } from "@privy-io/react-auth"
 import { formatEther } from "viem"
 import { liskSepolia } from "viem/chains"
 import {
@@ -18,6 +17,7 @@ import {
 import { useAuth } from "@/hooks/use-auth"
 import { formatNaira } from "@/lib/currency"
 import { getPrivyFundingErrorMessage, startPrivyFunding } from "@/lib/auth/privy-funding"
+import { useFundWallet, useWallets } from "@/lib/privy/react-auth"
 import { cn } from "@/lib/utils"
 import { InvestorWalletDedicatedAccountCard } from "@/components/dashboard/investor-wallet-dedicated-account-card"
 import { useToast } from "@/hooks/use-toast"

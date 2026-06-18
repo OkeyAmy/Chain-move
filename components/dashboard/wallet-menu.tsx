@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useFundWallet, useWallets } from "@privy-io/react-auth"
 import { ChevronRight, Copy, ExternalLink, Loader2, Wallet } from "lucide-react"
 import { formatEther } from "viem"
 import { liskSepolia } from "viem/chains"
@@ -20,6 +19,7 @@ import { formatNaira } from "@/lib/currency"
 import { useAuth } from "@/hooks/use-auth"
 import { getPrivyFundingErrorMessage, startPrivyFunding } from "@/lib/auth/privy-funding"
 import { useToast } from "@/components/ui/use-toast"
+import { useFundWallet, useWallets } from "@/lib/privy/react-auth"
 
 function truncateAddress(address: string) {
   if (address.length < 10) return address
