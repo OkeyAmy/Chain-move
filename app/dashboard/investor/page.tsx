@@ -21,6 +21,9 @@ import { useToast } from "@/hooks/use-toast"
 import { getPrivyFundingErrorMessage, startPrivyFunding } from "@/lib/auth/privy-funding"
 import { useFundWallet, useWallets } from "@/lib/privy/react-auth"
 import { formatNaira } from "@/lib/currency"
+import { isMockStellar } from "@/lib/mock-stellar/mockConfig"
+import { mockAccount } from "@/lib/mock-stellar/mockAccount"
+import { mockActivity } from "@/lib/mock-stellar/mockActivity"
 
 type PoolPreview = {
   id: string
@@ -108,7 +111,7 @@ export default function InvestorOverviewPage() {
     () => wallets.find((wallet) => wallet.walletClientType === "privy" || wallet.walletClientType === "privy-v2"),
     [wallets],
   )
-  const walletAddress = embeddedWallet?.address || authUser?.walletAddress || ""
+  const walletAddress = isMockStellar ? mockAccount.publicKey : (embeddedWallet?.address || authUser?.walletAddress || "")
   const isWalletConnected = Boolean(walletAddress)
   const investorKycComplete = isKycComplete((authUser as KycAwareAuthUser | null | undefined) ?? null)
 
@@ -135,6 +138,11 @@ export default function InvestorOverviewPage() {
   }, [toast])
 
   const refreshOnchainBalance = useCallback(async () => {
+    if (isMockStellar) {
+      setOnchainBalanceEth(Number.parseFloat(mockAccount.balance))
+      return
+    }
+
     if (!walletAddress) {
       setOnchainBalanceEth(null)
       return
@@ -162,7 +170,7 @@ export default function InvestorOverviewPage() {
     void refreshOnchainBalance()
   }, [refreshOnchainBalance])
 
-  const ethLabel = formatEthForUi(onchainBalanceEth)
+  const ethLabel = isMockStellar ? `${mockAccount.balance} XLM` : formatEthForUi(onchainBalanceEth)
 
   const metrics = useMemo(() => {
     const availableBalance = authUser?.availableBalance || 0
@@ -202,6 +210,18 @@ export default function InvestorOverviewPage() {
   }, [authUser?.availableBalance, authUser?.totalInvested, authUser?.totalReturns, ethLabel])
 
   const activityItems = useMemo(() => {
+    if (isMockStellar) {
+      return mockActivity.map((activity) => ({
+        id: activity.id,
+        title: activity.type,
+        startedLabel: `Date: ${formatStartedDate(activity.timestamp)}`,
+        amountLabel: formatNaira(Number.parseFloat(activity.amount)),
+        monthlyReturnsLabel: `Status: ${activity.status}`,
+        progressLabel: "Completed",
+        progressPercent: 100,
+      }))
+    }
+
     return openPools.slice(0, 2).map((pool) => {
       const principalAmount = pool.currentRaisedNgn > 0 ? pool.currentRaisedNgn : pool.targetAmountNgn
       const monthlyReturns = Math.round(principalAmount * 0.1)
@@ -223,6 +243,14 @@ export default function InvestorOverviewPage() {
   const bannerVariant = !isWalletConnected ? "connect-wallet" : !investorKycComplete ? "kyc" : null
 
   const handleDepositCrypto = async () => {
+    if (isMockStellar) {
+      toast({
+        title: "Mock Demo",
+        description: "Crypto deposit flow is simulated in demo mode.",
+      })
+      return
+    }
+
     if (!walletAddress) {
       router.push("/dashboard/investor/wallet")
       return

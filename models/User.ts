@@ -89,6 +89,12 @@ const UserSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
     },
+    stellarPublicKey: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
     role: {
       type: String,
       enum: ["driver", "investor", "admin"],
