@@ -1,15 +1,16 @@
 "use client"
 
 import type { FC, ReactNode } from "react"
-import { PrivyProvider } from "@privy-io/react-auth"
 import { liskSepolia } from "viem/chains"
+
+import { PrivyProvider } from "@/lib/privy/react-auth"
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID
 
 export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <PrivyProvider
-      appId={privyAppId ?? ""}
+      appId={privyAppId || ""}
       config={{
         loginMethods: ["email", "sms"],
         supportedChains: [liskSepolia],
