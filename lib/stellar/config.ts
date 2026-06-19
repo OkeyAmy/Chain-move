@@ -21,7 +21,7 @@ function getDefaultExplorerBaseUrl(network: string) {
 
 export function getStellarConfig(): StellarConfig {
   const network = process.env.STELLAR_NETWORK || "testnet"
-  const mock = process.env.ENABLE_MOCK_STELLAR ? process.env.ENABLE_MOCK_STELLAR === "true" : process.env.NODE_ENV !== "production"
+  const mock = process.env.ENABLE_MOCK_STELLAR === "true"
 
   return {
     network,

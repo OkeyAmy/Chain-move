@@ -15,6 +15,9 @@ describe("getStellarConfig", () => {
       "STELLAR_ISSUER_PUBLIC_KEY",
       "STELLAR_DISTRIBUTION_PUBLIC_KEY",
       "STELLAR_CONTRACT_ID",
+      "STELLAR_EXPLORER_BASE_URL",
+      "NEXT_PUBLIC_STELLAR_DEMO_PUBLIC_KEY",
+      "STELLAR_DEMO_PUBLIC_KEY",
       "CHAINMOVE_CA",
       "ENABLE_MOCK_STELLAR",
     ]
@@ -39,7 +42,9 @@ describe("getStellarConfig", () => {
       issuerPublicKey: "",
       distributionPublicKey: "",
       contractId: "",
+      explorerBaseUrl: "https://stellar.expert/explorer/testnet",
       mock: false,
+      demoPublicKey: "GABCDMOCKSTELLARPUBLICKEYTESTNET000000000000000000000000000000",
     })
   })
 
@@ -62,7 +67,9 @@ describe("getStellarConfig", () => {
       issuerPublicKey: "GD123...",
       distributionPublicKey: "GD456...",
       contractId: "C123...",
+      explorerBaseUrl: "https://stellar.expert/explorer/public",
       mock: false,
+      demoPublicKey: "GABCDMOCKSTELLARPUBLICKEYTESTNET000000000000000000000000000000",
     })
   })
 

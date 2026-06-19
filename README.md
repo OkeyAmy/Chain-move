@@ -67,6 +67,23 @@ In practical terms:
 - Stellar asset issuance, account flows, payout tracking, and Soroban contracts are the next chain layer
 - README language, roadmap, and contribution guidance below are written for the Stellar path
 
+### Wallet modes
+
+Wallet and chain assumptions live in `lib/wallet/config.ts`; UI-facing wallet shapes live in
+`lib/wallet/types.ts`.
+
+- **Current mode — Privy embedded wallet:** Privy remains the authentication and embedded-wallet
+  provider. New users receive an EVM wallet on Lisk Sepolia, preserving the existing signup,
+  provider, and funding flows.
+- **Planned mode — Stellar account:** a linked `stellarPublicKey` is displayed as a Stellar Testnet
+  account in wallet/profile surfaces. This display path is separate from authentication and does
+  not replace Privy.
+- **No linked wallet:** public wallet display helpers return a neutral “Not linked” state instead
+  of leaking chain-specific fallback assumptions into components.
+
+When Stellar signing is introduced, add it behind the planned mode rather than changing Privy
+authentication or scattering network constants through UI components.
+
 ## Tech Stack
 
 - Next.js 16 with the App Router

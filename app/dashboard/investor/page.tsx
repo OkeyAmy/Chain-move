@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CalendarDays, ChevronDown, PlusCircle } from "lucide-react"
 import { formatEther } from "viem"
-import { liskSepolia } from "viem/chains"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { DashboardHeader } from "@/components/dashboard/investor-overview/dashboard-header"
@@ -24,6 +23,7 @@ import { formatNaira } from "@/lib/currency"
 import { isMockStellar } from "@/lib/mock-stellar/mockConfig"
 import { mockAccount } from "@/lib/mock-stellar/mockAccount"
 import { mockActivity } from "@/lib/mock-stellar/mockActivity"
+import { CURRENT_EMBEDDED_WALLET } from "@/lib/wallet/config"
 
 type PoolPreview = {
   id: string
@@ -48,14 +48,16 @@ function truncateAddress(address: string) {
 }
 
 function formatEthForUi(balanceEth: number | null) {
-  if (!Number.isFinite(balanceEth) || balanceEth === null) return "0 ETH"
-  if (balanceEth < 0.01) return "0 ETH"
-  if (balanceEth < 1) return `${balanceEth.toFixed(2)} ETH`
-  return `${balanceEth.toFixed(1)} ETH`
+  const asset = CURRENT_EMBEDDED_WALLET.network.nativeAsset
+  if (!Number.isFinite(balanceEth) || balanceEth === null) return `0 ${asset}`
+  if (balanceEth < 0.01) return `0 ${asset}`
+  if (balanceEth < 1) return `${balanceEth.toFixed(2)} ${asset}`
+  return `${balanceEth.toFixed(1)} ${asset}`
 }
 
 async function resolveOnchainBalanceEth(address: string) {
-  const rpcUrl = liskSepolia.rpcUrls.default.http[0]
+  const rpcUrl = CURRENT_EMBEDDED_WALLET.network.rpcUrl
+  if (!rpcUrl) return null
   const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
