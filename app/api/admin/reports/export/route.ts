@@ -234,7 +234,15 @@ export async function GET(request: Request) {
       const kycQuery: Record<string, unknown> = { kycStatus: { $nin: ["none", null] }, ...dateMatch("createdAt", startDate, endDate) }
       if (["pending", "approved", "rejected"].includes(kycStatusFilter)) kycQuery.kycStatus = kycStatusFilter
       const kycUsers = await User.find(kycQuery).select("name fullName email role kycStatus kycVerified createdAt").sort({ createdAt: -1 }).lean()
-      return NextResponse.json({ message: "KYC export coming soon." }, { status: 501 })
+      const kycCsv = toCsv(
+        ["Date Joined", "Name", "Email", "Role", "KYC Status", "KYC Verified"],
+        kycUsers.map((u: any) => [
+          u.createdAt ? new Date(u.createdAt).toISOString() : "",
+          getUserName(u), u.email || "", u.role || "", u.kycStatus || "none", u.kycVerified ? "Yes" : "No",
+        ]),
+      )
+      const kycResponse = new NextResponse(kycCsv, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="kyc-report-${range}.csv"` } })
+      return shouldRefreshSession ? withSessionRefresh(kycResponse, user) : kycResponse
     }
 
 
