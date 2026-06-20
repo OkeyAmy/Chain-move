@@ -101,6 +101,14 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
   const poolsDateMatch = buildDateMatch("createdAt", startDate, endDate)
   const userDateMatch = buildDateMatch("createdAt", startDate, endDate)
 
+  // Tab-specific data
+  let kycStatusCounts: Array<{ _id: string; count: number }> = []
+  let recentKyc: any[] = []
+  let vehicleStatusCounts: Array<{ _id: string; count: number }> = []
+  let recentVehicles: any[] = []
+  let userRoleCounts: Array<{ _id: string; count: number }> = []
+  let recentUsers: any[] = []
+
   const [depositsAgg, poolInvestAgg, legacyInvestAgg, repaymentsAgg, creditsAgg, poolSummary] = await Promise.all([
     Transaction.aggregate([
       {
