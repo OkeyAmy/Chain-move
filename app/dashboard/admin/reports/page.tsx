@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Download } from "lucide-react"
+import { Download, Printer } from "lucide-react"
 
 import { PageHeader } from "@/components/dashboard/admin/page-header"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ interface ReportsPageProps {
 }
 
 type ReportRange = "7d" | "30d" | "90d" | "all" | "custom"
+type ReportTab = "overview" | "kyc" | "fleet" | "users"
 
 function getParam(value: string | string[] | undefined, fallback = "") {
   if (Array.isArray(value)) return value[0] ?? fallback
