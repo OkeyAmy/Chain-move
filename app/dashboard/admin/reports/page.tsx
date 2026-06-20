@@ -80,6 +80,20 @@ function hrefForTab(tab: ReportTab, range: ReportRange, from: string, to: string
   return `/dashboard/admin/reports?${params.toString()}`
 }
 
+function kycBadgeVariant(status: string) {
+  if (status === "approved") return "default"
+  if (status === "rejected") return "destructive"
+  if (status === "pending") return "secondary"
+  return "outline"
+}
+
+function vehicleStatusVariant(status: string) {
+  if (status === "Available") return "default"
+  if (status === "Financed" || status === "Reserved") return "secondary"
+  if (status === "Maintenance") return "destructive"
+  return "outline"
+}
+
 export default async function AdminReportsPage({ searchParams }: ReportsPageProps) {
   await requireAdminAccess()
   await dbConnect()
