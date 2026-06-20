@@ -260,6 +260,11 @@ export async function GET(request: Request) {
       return shouldRefreshSession ? withSessionRefresh(fleetResponse, user) : fleetResponse
     }
 
+    // ── users ─────────────────────────────────────────────────────────────────
+    if (type === "users") {
+      return NextResponse.json({ message: "Users export coming soon." }, { status: 501 })
+    }
+
     const repayments = await DriverPayment.find({
       status: "CONFIRMED",
       ...dateMatch("createdAt", startDate, endDate),
