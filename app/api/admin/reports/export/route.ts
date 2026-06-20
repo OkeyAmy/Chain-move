@@ -104,6 +104,7 @@ export async function GET(request: Request) {
     const range = parseRange(searchParams.get("range"))
     const { startDate, endDate } = buildWindow(range, searchParams.get("from"), searchParams.get("to"))
 
+    // ── deposits ────────────────────────────────────────────────────────────
     if (type === "deposits") {
       const deposits = await Transaction.find({
         type: { $in: ["deposit", "wallet_funding"] },
@@ -146,6 +147,7 @@ export async function GET(request: Request) {
       return shouldRefreshSession ? withSessionRefresh(response, user) : response
     }
 
+    // ── investments ──────────────────────────────────────────────────────────
     if (type === "investments") {
       const [poolInvestments, legacyInvestments] = await Promise.all([
         PoolInvestment.find({
@@ -228,97 +230,164 @@ export async function GET(request: Request) {
       return shouldRefreshSession ? withSessionRefresh(response, user) : response
     }
 
-    // ── kyc ──────────────────────────────────────────────────────────────
+    // ── repayments ───────────────────────────────────────────────────────────
+    if (type === "repayments") {
+      const repayments = await DriverPayment.find({
+        status: "CONFIRMED",
+        ...dateMatch("createdAt", startDate, endDate),
+      })
+        .select("driverUserId contractId amountNgn appliedAmountNgn method paystackRef status createdAt")
+        .sort({ createdAt: -1 })
+        .lean()
+
+      const userIds = collectObjectIds(repayments.map((item: any) => item.driverUserId))
+      const contractIds = collectObjectIds(repayments.map((item: any) => item.contractId))
+
+      const [users, contracts] = await Promise.all([
+        userIds.length ? User.find({ _id: { $in: userIds } }).select("name fullName email").lean() : Promise.resolve([]),
+        contractIds.length
+          ? HirePurchaseContract.find({ _id: { $in: contractIds } }).select("vehicleDisplayName").lean()
+          : Promise.resolve([]),
+      ])
+
+      const userById = new Map(users.map((entry: any) => [entry._id.toString(), entry]))
+      const contractById = new Map(contracts.map((entry: any) => [entry._id.toString(), entry]))
+
+      const csv = toCsv(
+        ["Date", "Driver", "Email", "Vehicle/Contract", "Amount (NGN)", "Applied Amount (NGN)", "Method", "Reference", "Status"],
+        repayments.map((item: any) => {
+          const userEntry = userById.get(item.driverUserId?.toString?.() || "")
+          const contract = contractById.get(item.contractId?.toString?.() || "")
+          return [
+            item.createdAt ? new Date(item.createdAt).toISOString() : "",
+            getUserName(userEntry),
+            userEntry?.email || "",
+            contract?.vehicleDisplayName || "Contract",
+            Number(item.amountNgn || 0),
+            Number(item.appliedAmountNgn || 0),
+            item.method || "PAYSTACK",
+            item.paystackRef || "",
+            item.status || "unknown",
+          ]
+        }),
+      )
+
+      const response = new NextResponse(csv, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="repayments-${range}.csv"`,
+        },
+      })
+      return shouldRefreshSession ? withSessionRefresh(response, user) : response
+    }
+
+    // ── kyc ──────────────────────────────────────────────────────────────────
     if (type === "kyc") {
       const kycStatusFilter = searchParams.get("status") || ""
-      const kycQuery: Record<string, unknown> = { kycStatus: { $nin: ["none", null] }, ...dateMatch("createdAt", startDate, endDate) }
-      if (["pending", "approved", "rejected"].includes(kycStatusFilter)) kycQuery.kycStatus = kycStatusFilter
-      const kycUsers = await User.find(kycQuery).select("name fullName email role kycStatus kycVerified createdAt").sort({ createdAt: -1 }).lean()
-      const kycCsv = toCsv(
+      const kycQuery: Record<string, unknown> = {
+        kycStatus: { $ne: "none" },
+        ...dateMatch("createdAt", startDate, endDate),
+      }
+      if (["pending", "approved", "rejected"].includes(kycStatusFilter)) {
+        kycQuery.kycStatus = kycStatusFilter
+      }
+
+      const kycUsers = await User.find(kycQuery)
+        .select("name fullName email role kycStatus kycVerified createdAt")
+        .sort({ createdAt: -1 })
+        .lean()
+
+      const csv = toCsv(
         ["Date Joined", "Name", "Email", "Role", "KYC Status", "KYC Verified"],
         kycUsers.map((u: any) => [
           u.createdAt ? new Date(u.createdAt).toISOString() : "",
-          getUserName(u), u.email || "", u.role || "", u.kycStatus || "none", u.kycVerified ? "Yes" : "No",
+          getUserName(u),
+          u.email || "",
+          u.role || "",
+          u.kycStatus || "none",
+          u.kycVerified ? "Yes" : "No",
         ]),
       )
-      const kycResponse = new NextResponse(kycCsv, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="kyc-report-${range}.csv"` } })
-      return shouldRefreshSession ? withSessionRefresh(kycResponse, user) : kycResponse
-    }
 
+      const response = new NextResponse(csv, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="kyc-report-${range}.csv"`,
+        },
+      })
+      return shouldRefreshSession ? withSessionRefresh(response, user) : response
+    }
 
     // ── fleet ─────────────────────────────────────────────────────────────────
     if (type === "fleet") {
-      const vStatusFilter = searchParams.get("vstatus") || ""
-      const vQuery: Record<string, unknown> = {}
-      if (["Available", "Financed", "Reserved", "Maintenance", "Retired"].includes(vStatusFilter)) vQuery.status = vStatusFilter
-      const vehicles = await Vehicle.find(vQuery).select("name identifier type year price status fundingStatus totalFundedAmount addedDate").sort({ addedDate: -1 }).lean()
-      const fleetCsv = toCsv(
+      const vehicleStatusFilter = searchParams.get("vstatus") || ""
+      const vehicleQuery: Record<string, unknown> = {}
+      if (["Available", "Financed", "Reserved", "Maintenance", "Retired"].includes(vehicleStatusFilter)) {
+        vehicleQuery.status = vehicleStatusFilter
+      }
+
+      const vehicles = await Vehicle.find(vehicleQuery)
+        .select("name identifier type year price status fundingStatus totalFundedAmount addedDate")
+        .sort({ addedDate: -1 })
+        .lean()
+
+      const csv = toCsv(
         ["Date Added", "Name", "Identifier", "Type", "Year", "Price (NGN)", "Status", "Funding Status", "Total Funded (NGN)"],
-        vehicles.map((v: any) => [v.addedDate ? new Date(v.addedDate).toISOString() : "", v.name || "", v.identifier || "", v.type || "", v.year || "", Number(v.price || 0), v.status || "", v.fundingStatus || "", Number(v.totalFundedAmount || 0)]),
+        vehicles.map((v: any) => [
+          v.addedDate ? new Date(v.addedDate).toISOString() : "",
+          v.name || "",
+          v.identifier || "",
+          v.type || "",
+          v.year || "",
+          Number(v.price || 0),
+          v.status || "",
+          v.fundingStatus || "",
+          Number(v.totalFundedAmount || 0),
+        ]),
       )
-      const fleetResponse = new NextResponse(fleetCsv, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="fleet-report-${range}.csv"` } })
-      return shouldRefreshSession ? withSessionRefresh(fleetResponse, user) : fleetResponse
+
+      const response = new NextResponse(csv, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="fleet-report-${range}.csv"`,
+        },
+      })
+      return shouldRefreshSession ? withSessionRefresh(response, user) : response
     }
 
     // ── users ─────────────────────────────────────────────────────────────────
-    if (type === "users") {
-      const roleFilter = searchParams.get("role") || ""
-      const uQuery: Record<string, unknown> = { ...dateMatch("createdAt", startDate, endDate) }
-      if (["driver", "investor", "admin"].includes(roleFilter)) uQuery.role = roleFilter
-      const platformUsers = await User.find(uQuery).select("name fullName email role kycVerified createdAt").sort({ createdAt: -1 }).lean()
-      const usersCsv = toCsv(
-        ["Date Joined", "Name", "Email", "Role", "KYC Verified"],
-        platformUsers.map((u: any) => [u.createdAt ? new Date(u.createdAt).toISOString() : "", getUserName(u), u.email || "", u.role || "", u.kycVerified ? "Yes" : "No"]),
-      )
-      const usersResponse = new NextResponse(usersCsv, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="users-report-${range}.csv"` } })
-      return shouldRefreshSession ? withSessionRefresh(usersResponse, user) : usersResponse
+    const roleFilter = searchParams.get("role") || ""
+    const userQuery: Record<string, unknown> = {
+      ...dateMatch("createdAt", startDate, endDate),
+    }
+    if (["driver", "investor", "admin"].includes(roleFilter)) {
+      userQuery.role = roleFilter
     }
 
-    const repayments = await DriverPayment.find({
-      status: "CONFIRMED",
-      ...dateMatch("createdAt", startDate, endDate),
-    })
-      .select("driverUserId contractId amountNgn appliedAmountNgn method paystackRef status createdAt")
+    const platformUsers = await User.find(userQuery)
+      .select("name fullName email role kycVerified createdAt")
       .sort({ createdAt: -1 })
       .lean()
 
-    const userIds = collectObjectIds(repayments.map((item: any) => item.driverUserId))
-    const contractIds = collectObjectIds(repayments.map((item: any) => item.contractId))
-
-    const [users, contracts] = await Promise.all([
-      userIds.length ? User.find({ _id: { $in: userIds } }).select("name fullName email").lean() : Promise.resolve([]),
-      contractIds.length
-        ? HirePurchaseContract.find({ _id: { $in: contractIds } }).select("vehicleDisplayName").lean()
-        : Promise.resolve([]),
-    ])
-
-    const userById = new Map(users.map((entry: any) => [entry._id.toString(), entry]))
-    const contractById = new Map(contracts.map((entry: any) => [entry._id.toString(), entry]))
-
     const csv = toCsv(
-      ["Date", "Driver", "Email", "Vehicle/Contract", "Amount (NGN)", "Applied Amount (NGN)", "Method", "Reference", "Status"],
-      repayments.map((item: any) => {
-        const userEntry = userById.get(item.driverUserId?.toString?.() || "")
-        const contract = contractById.get(item.contractId?.toString?.() || "")
-        return [
-          item.createdAt ? new Date(item.createdAt).toISOString() : "",
-          getUserName(userEntry),
-          userEntry?.email || "",
-          contract?.vehicleDisplayName || "Contract",
-          Number(item.amountNgn || 0),
-          Number(item.appliedAmountNgn || 0),
-          item.method || "PAYSTACK",
-          item.paystackRef || "",
-          item.status || "unknown",
-        ]
-      }),
+      ["Date Joined", "Name", "Email", "Role", "KYC Verified"],
+      platformUsers.map((u: any) => [
+        u.createdAt ? new Date(u.createdAt).toISOString() : "",
+        getUserName(u),
+        u.email || "",
+        u.role || "",
+        u.kycVerified ? "Yes" : "No",
+      ]),
     )
 
     const response = new NextResponse(csv, {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="repayments-${range}.csv"`,
+        "Content-Disposition": `attachment; filename="users-report-${range}.csv"`,
       },
     })
     return shouldRefreshSession ? withSessionRefresh(response, user) : response
