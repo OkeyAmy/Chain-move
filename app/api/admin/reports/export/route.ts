@@ -230,6 +230,7 @@ export async function GET(request: Request) {
 
     // ── kyc ──────────────────────────────────────────────────────────────
     if (type === "kyc") {
+      const kycStatusFilter = searchParams.get("status") || ""
       return NextResponse.json({ message: "KYC export coming soon." }, { status: 501 })
     }
 
