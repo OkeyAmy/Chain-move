@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ActivityUnreadBell } from "@/components/dashboard/activity-unread-bell"
 import { emitDashboardSidebarToggle } from "@/components/dashboard/sidebar-events"
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions"
 import { isDashboardRole, type DashboardRole } from "@/lib/dashboard/roles"
@@ -15,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bell, ChevronLeft, Menu, MoreVertical, User } from "lucide-react"
+import { ChevronLeft, Menu, MoreVertical, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getUserDisplayName, useAuth } from "@/hooks/use-auth"
 import { resolveDashboardUserStatus } from "@/lib/users/user-profile"
@@ -145,19 +146,14 @@ export function Header({
 
           <ThemeToggle className="hidden md:inline-flex" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Notifications"
-          >
-            <Bell className="h-[1.2rem] w-[1.2rem]" />
-            {notificationCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
-                {notificationCount > 99 ? "99+" : notificationCount}
-              </span>
-            ) : null}
-          </Button>
+          <ActivityUnreadBell
+            role={
+              authUser?.role === "driver" || authUser?.role === "investor" || authUser?.role === "admin"
+                ? authUser.role
+                : undefined
+            }
+            fallbackCount={notificationCount}
+          />
 
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
