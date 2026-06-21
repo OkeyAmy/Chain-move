@@ -94,3 +94,67 @@ Avoid reintroducing stale Lisk, EVM, Solana, or Thirdweb assumptions unless the 
 ## Security-sensitive changes
 
 Open a small PR and explain the risk being fixed. Security-sensitive areas include session handling, Privy token verification, Paystack webhooks, KYC upload/encryption, Stellar signing, admin permissions, and database access controls.
+
+## Environment Setup
+
+1. Copy the example environment file:
+
+```bash
+cp .env.example .env.local
+```
+Populate only your local development values.
+Never request production credentials from maintainers.
+Never commit:
+.env.local
+API keys
+JWT secrets
+database credentials
+Stellar private keys
+
+---
+
+## Mock Development
+
+Contributors should use mock mode whenever possible.
+
+Do not depend on production services for feature development.
+
+Use local test data and development configurations.
+
+---
+
+## Pull Request Guidelines
+
+Keep pull requests focused.
+
+Good examples:
+
+- Wallet UI improvements
+- Documentation updates
+- Authentication fixes
+- Stellar integration enhancements
+
+Avoid combining unrelated changes.
+
+Before opening a PR run:
+
+```bash
+npm run lint
+npm run build
+```
+
+---
+
+## Affected Areas
+
+When opening a PR specify:
+
+- Frontend
+- Backend
+- Authentication
+- Payments
+- Stellar
+- Documentation
+- Tests
+- UI/UX
+
