@@ -1,39 +1,13 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest"
+import { describe, expect, it } from "vitest"
+
 import { getStellarConfig, parseStellarNetwork } from "./config"
-
-describe("getStellarConfig", () => {
-  const originalEnv = { ...process.env }
-
-  beforeEach(() => {
-    // Clear out related env vars to test defaults and ensure test isolation
-    const keysToRemove = [
-      "STELLAR_NETWORK",
-      "STELLAR_HORIZON_URL",
-      "STELLAR_RPC_URL",
-      "RPC_URL",
-      "STELLAR_ASSET_CODE",
-      "STELLAR_ISSUER_PUBLIC_KEY",
-      "STELLAR_DISTRIBUTION_PUBLIC_KEY",
-      "STELLAR_CONTRACT_ID",
-      "STELLAR_EXPLORER_BASE_URL",
-      "NEXT_PUBLIC_STELLAR_DEMO_PUBLIC_KEY",
-      "STELLAR_DEMO_PUBLIC_KEY",
-      "CHAINMOVE_CA",
-      "ENABLE_MOCK_STELLAR",
-    ]
-    keysToRemove.forEach((key) => {
-      delete process.env[key]
-    })
-  })
-
-import { getStellarConfig } from "./config"
 
 const VALID_PUBLIC_KEY = "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H"
 const VALID_CONTRACT_SHAPE = `C${"A".repeat(55)}`
 
 describe("getStellarConfig", () => {
-  it("lets mock mode use defaults without deployment identifiers", () => {
-    expect(getStellarConfig({ ENABLE_MOCK_STELLAR: "true" })).toMatchObject({
+  it("lets mock mode use testnet defaults without deployment identifiers", () => {
+    expect(getStellarConfig({ ENABLE_MOCK_STELLAR: "true" })).toEqual({
       network: "testnet",
       horizonUrl: "https://horizon-testnet.stellar.org",
       rpcUrl: "https://soroban-testnet.stellar.org",
@@ -41,53 +15,17 @@ describe("getStellarConfig", () => {
       issuerPublicKey: "",
       distributionPublicKey: "",
       contractId: "",
-      explorerBaseUrl: "https://stellar.expert/explorer/testnet",
-      mock: false,
-      demoPublicKey: "GABCDMOCKSTELLARPUBLICKEYTESTNET000000000000000000000000000000",
+      mock: true,
     })
   })
 
-  it("should resolve mainnet defaults and custom environment overrides", () => {
-    process.env.STELLAR_NETWORK = "mainnet"
-    process.env.STELLAR_ASSET_CODE = "TEST"
-    process.env.STELLAR_ISSUER_PUBLIC_KEY = "GD123..."
-    process.env.STELLAR_DISTRIBUTION_PUBLIC_KEY = "GD456..."
-    process.env.STELLAR_CONTRACT_ID = "C123..."
-
-    const config = getStellarConfig()
-
-    expect(config).toEqual({
-      network: "mainnet",
-      horizonUrl: "https://horizon.stellar.org",
-      rpcUrl: "https://soroban-mainnet.stellar.org",
-      assetCode: "TEST",
-      issuerPublicKey: "GD123...",
-      distributionPublicKey: "GD456...",
-      contractId: "C123...",
-      explorerBaseUrl: "https://stellar.expert/explorer/public",
-      mock: false,
-      demoPublicKey: "GABCDMOCKSTELLARPUBLICKEYTESTNET000000000000000000000000000000",
-    })
+  it("names a missing required field when mock mode is disabled", () => {
+    expect(() => getStellarConfig({ ENABLE_MOCK_STELLAR: "false" })).toThrow(
+      "Missing required Stellar configuration: STELLAR_ISSUER_PUBLIC_KEY",
+    )
   })
 
-  it("should reject unsupported networks instead of falling back to testnet", () => {
-    process.env.STELLAR_NETWORK = "futurenet"
-
-    expect(() => getStellarConfig()).toThrow('Invalid Stellar network "futurenet". Expected "testnet" or "mainnet".')
-    expect(() => parseStellarNetwork("futurenet")).toThrow(/Invalid Stellar network/)
-  })
-
-  it("should support RPC_URL and CHAINMOVE_CA fallbacks when STELLAR_ RPC/contract variables are missing", () => {
-    process.env.RPC_URL = "https://fallback-rpc.stellar.org"
-    process.env.CHAINMOVE_CA = "CC_FALLBACK_123"
-
-    const config = getStellarConfig()
-
-    expect(config.rpcUrl).toBe("https://fallback-rpc.stellar.org")
-    expect(config.contractId).toBe("CC_FALLBACK_123")
-  })
-
-  it("returns configured testnet URLs for a valid live configuration", () => {
+  it("returns configured URLs for a valid live configuration", () => {
     const config = getStellarConfig({
       STELLAR_NETWORK: "testnet",
       STELLAR_HORIZON_URL: "https://example.com/horizon",
@@ -102,10 +40,21 @@ describe("getStellarConfig", () => {
     expect(config.rpcUrl).toBe("https://example.com/rpc")
   })
 
+  it("selects mainnet endpoint defaults", () => {
+    const config = getStellarConfig({
+      STELLAR_NETWORK: "mainnet",
+      ENABLE_MOCK_STELLAR: "true",
+    })
+
+    expect(config.horizonUrl).toBe("https://horizon.stellar.org")
+    expect(config.rpcUrl).toBe("https://soroban-mainnet.stellar.org")
+  })
+
   it("rejects unsupported networks even in mock mode", () => {
     expect(() =>
       getStellarConfig({ STELLAR_NETWORK: "futurenet", ENABLE_MOCK_STELLAR: "true" }),
     ).toThrow('Unsupported STELLAR_NETWORK: "futurenet"')
+    expect(() => parseStellarNetwork("futurenet")).toThrow(/Unsupported STELLAR_NETWORK/)
   })
 
   it("allows placeholders only in mock mode", () => {

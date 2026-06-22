@@ -1,4 +1,8 @@
-export type StellarNetwork = "testnet" | "mainnet"
+import { isValidStellarPublicKey } from "@/lib/validation/stellar"
+
+export const STELLAR_NETWORKS = ["testnet", "mainnet"] as const
+
+export type StellarNetwork = (typeof STELLAR_NETWORKS)[number]
 
 export interface StellarConfig {
   network: StellarNetwork
@@ -19,55 +23,40 @@ type StellarEnvironment = Partial<Record<
   | "STELLAR_ISSUER_PUBLIC_KEY"
   | "STELLAR_DISTRIBUTION_PUBLIC_KEY"
   | "STELLAR_CONTRACT_ID"
-  | "ENABLE_MOCK_STELLAR",
+  | "ENABLE_MOCK_STELLAR"
+  | "NODE_ENV",
   string | undefined
 >>
 
-const NETWORK_DEFAULTS: Record<StellarNetwork, Pick<StellarConfig, "horizonUrl" | "rpcUrl" | "explorerBaseUrl">> = {
+const NETWORK_DEFAULTS: Record<StellarNetwork, Pick<StellarConfig, "horizonUrl" | "rpcUrl">> = {
   testnet: {
     horizonUrl: "https://horizon-testnet.stellar.org",
     rpcUrl: "https://soroban-testnet.stellar.org",
-    explorerBaseUrl: TESTNET_EXPLORER_BASE_URL,
   },
   mainnet: {
     horizonUrl: "https://horizon.stellar.org",
     rpcUrl: "https://soroban-mainnet.stellar.org",
-    explorerBaseUrl: MAINNET_EXPLORER_BASE_URL,
   },
 }
 
-/**
- * Normalizes the deployment network to a supported Stellar network.
- *
- * Keeping this validation in the shared config layer means all server clients
- * select the same endpoints and fail fast instead of silently using Testnet.
- */
-export function parseStellarNetwork(value: string | undefined): StellarNetwork {
-  const network = value?.trim().toLowerCase() || "testnet"
+const REQUIRED_DEPLOYMENT_FIELDS = [
+  "STELLAR_ISSUER_PUBLIC_KEY",
+  "STELLAR_DISTRIBUTION_PUBLIC_KEY",
+  "STELLAR_CONTRACT_ID",
+] as const
 
-  if (network === "testnet" || network === "mainnet") {
-    return network
-  }
-
-  throw new Error(`Invalid Stellar network "${value}". Expected "testnet" or "mainnet".`)
+function value(env: StellarEnvironment, name: keyof StellarEnvironment): string {
+  return env[name]?.trim() ?? ""
 }
 
-export function getStellarConfig(): StellarConfig {
-  const network = parseStellarNetwork(process.env.STELLAR_NETWORK)
-  const defaults = NETWORK_DEFAULTS[network]
-  const mock = process.env.ENABLE_MOCK_STELLAR === "true"
+function isPlaceholder(input: string): boolean {
+  return input.toLowerCase().startsWith("replace_")
+}
 
-  return {
-    network,
-    horizonUrl: process.env.STELLAR_HORIZON_URL || defaults.horizonUrl,
-    rpcUrl: process.env.STELLAR_RPC_URL || process.env.RPC_URL || defaults.rpcUrl,
-    assetCode: process.env.STELLAR_ASSET_CODE || "CMOVE",
-    issuerPublicKey: process.env.STELLAR_ISSUER_PUBLIC_KEY || "",
-    distributionPublicKey: process.env.STELLAR_DISTRIBUTION_PUBLIC_KEY || "",
-    contractId: process.env.STELLAR_CONTRACT_ID || process.env.CHAINMOVE_CA || "",
-    explorerBaseUrl: process.env.STELLAR_EXPLORER_BASE_URL || defaults.explorerBaseUrl,
-    mock,
-    demoPublicKey: process.env.NEXT_PUBLIC_STELLAR_DEMO_PUBLIC_KEY || process.env.STELLAR_DEMO_PUBLIC_KEY || FALLBACK_DEMO_PUBLIC_KEY,
+export function parseStellarNetwork(input: string | undefined): StellarNetwork {
+  const network = input?.trim().toLowerCase() || "testnet"
+  if (!STELLAR_NETWORKS.includes(network as StellarNetwork)) {
+    throw new Error(`Unsupported STELLAR_NETWORK: "${input}". Supported values are testnet and mainnet.`)
   }
   return network as StellarNetwork
 }
@@ -94,11 +83,11 @@ function validateDeploymentConfig(config: StellarConfig): void {
 }
 
 /**
- * Reads server-side Stellar configuration. This layer intentionally accepts only
- * public account identifiers and endpoints; private/secret keys never belong here.
+ * Reads server-side Stellar configuration. Only public account identifiers
+ * and endpoints belong here; private or secret keys must never be added.
  */
 export function getStellarConfig(env: StellarEnvironment = process.env): StellarConfig {
-  const network = parseNetwork(value(env, "STELLAR_NETWORK"))
+  const network = parseStellarNetwork(value(env, "STELLAR_NETWORK"))
   const mock = value(env, "ENABLE_MOCK_STELLAR").toLowerCase() === "true"
   const defaults = NETWORK_DEFAULTS[network]
 
